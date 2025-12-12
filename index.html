@@ -181,7 +181,7 @@
         <button onclick="appendNumber('7')">7</button>
         <button onclick="appendNumber('8')">8</button>
         <button onclick="appendNumber('9')">9</button>
-        <button onclick="chooseOperation('*')">*</button>
+        <button onclick="chooseOperation('x')">*</button>
         
         <button onclick="appendNumber('4')">4</button>
         <button onclick="appendNumber('5')">5</button>
@@ -229,7 +229,7 @@
         switch (operation) {
             case '+': return prev + curr;
             case '-': return prev - curr;
-            case '*': return prev * curr;
+            case 'x': return prev * curr;
             case '/': return curr === 0 ? '∞' : prev / curr;
             default: return null;
         }
@@ -318,7 +318,7 @@
         switch (operation) {
             case '+': computation = prev + curr; opSym = '+'; break;
             case '-': computation = prev - curr; opSym = '−'; break;
-            case '*': computation = prev * curr; opSym = '×'; break;
+            case 'x': computation = prev * curr; opSym = '×'; break;
             case '/': computation = curr === 0 ? '∞' : prev / curr; opSym = '÷'; break;
             default: return;
         }
