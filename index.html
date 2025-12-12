@@ -181,7 +181,7 @@
         <button onclick="appendNumber('7')">7</button>
         <button onclick="appendNumber('8')">8</button>
         <button onclick="appendNumber('9')">9</button>
-        <button onclick="chooseOperation('x')">x</button>
+        <button onclick="chooseOperation('*')">x</button>
         
         <button onclick="appendNumber('4')">4</button>
         <button onclick="appendNumber('5')">5</button>
@@ -229,7 +229,7 @@
         switch (operation) {
             case '+': return prev + curr;
             case '-': return prev - curr;
-            case 'x': return prev * curr;
+            case '*': return prev * curr;
             case '/': return curr === 0 ? '∞' : prev / curr;
             default: return null;
         }
@@ -239,7 +239,7 @@
         switch(op){
             case '+': return '+';
             case '-': return '−';
-            case 'x': return '×';
+            case '*': return 'x';
             case '/': return '÷';
             default: return '';
         }
@@ -318,7 +318,7 @@
         switch (operation) {
             case '+': computation = prev + curr; opSym = '+'; break;
             case '-': computation = prev - curr; opSym = '−'; break;
-            case 'x': computation = prev * curr; opSym = '×'; break;
+            case '*': computation = prev * curr; opSym = '×'; break;
             case '/': computation = curr === 0 ? '∞' : prev / curr; opSym = '÷'; break;
             default: return;
         }
@@ -379,7 +379,7 @@
     document.addEventListener('keydown', (e) => {
         if (e.key >= '0' && e.key <= '9') { appendNumber(e.key); e.preventDefault(); return; }
         if (e.key === '.') { appendNumber('.'); e.preventDefault(); return; }
-        if (e.key === '+' || e.key === '-' || e.key === 'x' || e.key === '/') { chooseOperation(e.key); e.preventDefault(); return; }
+        if (e.key === '+' || e.key === '-' || e.key === '*' || e.key === '/') { chooseOperation(e.key); e.preventDefault(); return; }
         if (e.key === 'Enter') { calculate(); e.preventDefault(); return; }
         if (e.key === 'Backspace') { deleteLast(); e.preventDefault(); return; }
         if (e.key === 'Escape') { clearDisplay(); e.preventDefault(); return; }
