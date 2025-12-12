@@ -7,7 +7,7 @@
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #e0f7fa;
+            background-color: var(--bg);
             display: flex;
             justify-content: center;
             align-items: center;
@@ -15,22 +15,100 @@
             margin: 0;
         }
         .calculator {
-            background-color: #fff;
+            background-color: var(--card);
             padding: 20px;
             border-radius: 15px;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
             width: 320px;
         }
+        :root{
+            --bg: #e0f7fa;
+            --card: #ffffff;
+            --accent: #00796b;
+            --muted: #004d40;
+            --button: #b2ebf2;
+            --highlight: #80deea;
+        }
+        .dark-theme{
+            --bg: #0f1720;
+            --card: #071021;
+            --accent: #80d8ff;
+            --muted: #b3e5fc;
+            --button: #082233;
+            --highlight: #0b7b9c;
+        }
+        .display-container {
+            margin-bottom: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            gap: 6px;
+        }
+        #expression {
+            width: 92%;
+            text-align: right;
+            font-size: 16px;
+            color: var(--muted);
+            height: 22px;
+            padding: 2px 12px;
+            min-height: 22px;
+            opacity: 0.95;
+            transition: color 240ms ease, transform 160ms ease;
+        }
+        #history {
+            width: 92%;
+            text-align: right;
+            font-size: 14px;
+            color: var(--accent);
+            height: 20px;
+            padding: 2px 12px;
+            min-height: 20px;
+            transition: all 180ms ease;
+        }
+        #history.preview {
+            color: var(--accent);
+            font-weight: 700;
+            transform: translateY(-2px);
+        }
         #display {
             width: 92%;
-            height: 60px;
-            text-align: right;
-            font-size: 30px;
-            margin-bottom: 15px;
+            height: 70px;
+            text-align: center;
+            font-size: 28px;
             padding: 10px;
-            border: 2px solid #b2ebf2;
-            border-radius: 10px;
-            background-color: #e0f7fa;
+            border: 2px solid rgba(178,235,242,0.9);
+            border-radius: 14px;
+            background: linear-gradient(135deg, rgba(255,255,255,0.6), rgba(224,247,250,0.8));
+            box-shadow: 0 8px 18px rgba(0,0,0,0.06);
+            transition: box-shadow 220ms ease, transform 160ms ease, background 240ms ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--muted);
+            letter-spacing: 3px;
+            user-select: none;
+        }
+        #display.masked {
+            font-family: 'Courier New', monospace;
+            color: rgba(0,77,64,0.9);
+        }
+        .button-anim {
+            transition: transform 120ms cubic-bezier(.2,.9,.2,1), box-shadow 160ms ease;
+        }
+        button:active, .pressed {
+            transform: translateY(2px) scale(0.995);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.08) inset;
+        }
+        .ripple {
+            position: absolute;
+            border-radius: 50%;
+            transform: scale(0);
+            background: rgba(255,255,255,0.5);
+            animation: ripple 600ms ease-out;
+            pointer-events: none;
+        }
+        @keyframes ripple {
+            to { transform: scale(4); opacity: 0; }
         }
         .buttons {
             display: grid;
@@ -42,13 +120,13 @@
             font-size: 18px;
             border: none;
             border-radius: 10px;
-            background-color: #b2ebf2;
-            color: #00796b;
+            background-color: var(--button);
+            color: var(--accent);
             cursor: pointer;
             transition: background-color 0.3s ease;
         }
         button:hover {
-            background-color: #80deea;
+            background-color: var(--highlight);
         }
         .equal {
             background-color: #4CAF50;
@@ -69,14 +147,31 @@
             color: #f57f17;
         }
         .special:hover {
-            background-color: #fbc02d;
+            background-color: #ffd54f;
+        }
+        /* theme toggle */
+        .theme-toggle{
+            position: absolute;
+            right: 18px;
+            top: 14px;
+            border-radius: 8px;
+            padding: 6px 8px;
+            cursor: pointer;
+            background: transparent;
+            color: var(--accent);
+            border: 1px solid rgba(0,0,0,0.04);
         }
     </style>
 </head>
 <body>
 
 <div class="calculator">
-    <input type="text" id="display" disabled>
+    <div class="display-container">
+        <div id="expression"></div>
+        <div id="history"></div>
+        <input type="text" id="display" disabled>
+    </div>
+    <button id="themeToggle" class="theme-toggle" title="Toggle theme">🎨</button>
     <div class="buttons">
         <button onclick="clearDisplay()" class="clear">C</button>
         <button onclick="percent()" class="special">%</button>
@@ -105,83 +200,219 @@
 </div>
 
 <script>
-    let display = document.getElementById('display');
+    const display = document.getElementById('display');
+    const historyEl = document.getElementById('history');
+    const expressionEl = document.getElementById('expression');
+    const themeToggle = document.getElementById('themeToggle');
     let currentOperand = '';
     let previousOperand = '';
     let operation = undefined;
+    let lastCalculation = '';
+    let showFull = false; // ketika true, tampilkan hasil penuh di display
 
-    // Menambahkan angka ke tampilan
+    // Format number minimal (trim long floats)
+    function formatNumber(n) {
+        if (Number.isFinite(n)) {
+            const str = n.toString();
+            if (str.length > 12) return Number(n).toPrecision(12).replace(/\.0+$|(?<=(\.[0-9]*?))0+$/,'');
+            return str;
+        }
+        return n;
+    }
+
+    // compute preview result for live display
+    function computePreview() {
+        if (previousOperand === '' || operation === undefined || currentOperand === '') return null;
+        const prev = parseFloat(previousOperand);
+        const curr = parseFloat(currentOperand);
+        if (isNaN(prev) || isNaN(curr)) return null;
+        switch (operation) {
+            case '+': return prev + curr;
+            case '-': return prev - curr;
+            case '*': return prev * curr;
+            case '/': return curr === 0 ? '∞' : prev / curr;
+            default: return null;
+        }
+    }
+
+    function opSymbol(op){
+        switch(op){
+            case '+': return '+';
+            case '-': return '−';
+            case '*': return '×';
+            case '/': return '÷';
+            default: return '';
+        }
+    }
+
+    // Update UI: show expression in main display + live preview
+    function updateDisplay() {
+        // Build expression string
+        let expr = '';
+        if (previousOperand !== '' && operation !== undefined) {
+            expr = `${previousOperand} ${opSymbol(operation)} ${currentOperand}`.trim();
+        } else if (currentOperand !== '') {
+            expr = `${currentOperand}`;
+        } else if (previousOperand !== '') {
+            expr = `${previousOperand}`;
+        }
+        expressionEl.textContent = expr;
+
+        // Display expression in main display while typing; show full result only after '='
+        if (showFull) {
+            display.value = formatNumber(currentOperand);
+        } else {
+            display.value = expr || '';
+        }
+
+        // Live preview in history
+        const preview = computePreview();
+        if (preview !== null) {
+            historyEl.textContent = formatNumber(preview);
+            historyEl.classList.add('preview');
+        } else {
+            historyEl.classList.remove('preview');
+            historyEl.textContent = lastCalculation || '';
+        }
+    }
+
+    // Menambahkan angka (tetap disembunyikan di display)
     function appendNumber(number) {
+        // If previously showing full result and user types, reset for new entry
+        if (showFull) {
+            currentOperand = '';
+            previousOperand = '';
+            operation = undefined;
+            lastCalculation = '';
+            showFull = false;
+        }
         if (number === '.' && currentOperand.includes('.')) return;
         currentOperand = currentOperand.toString() + number.toString();
         updateDisplay();
     }
 
-    // Memilih operasi
+    // Pilih operasi tapi jangan tampilkan operasinya di main display
     function chooseOperation(op) {
         if (currentOperand === '') return;
         if (previousOperand !== '') {
-            calculate();
+            // jika sudah ada previous, biarkan kalkulasi berjalan secara otomatis
+            const preview = computePreview();
+            if (preview !== null) {
+                currentOperand = String(preview);
+            }
         }
         operation = op;
         previousOperand = currentOperand;
         currentOperand = '';
+        showFull = false;
+        updateDisplay();
     }
 
-    // Kalkulasi operasi
+    // Kalkulasi akhir saat tekan '='
     function calculate() {
-        let computation;
         const prev = parseFloat(previousOperand);
-        const current = parseFloat(currentOperand);
-        if (isNaN(prev) || isNaN(current)) return;
+        const curr = parseFloat(currentOperand);
+        if (isNaN(prev) || isNaN(curr) || operation === undefined) return;
+        let computation;
+        let opSym = '';
         switch (operation) {
-            case '+':
-                computation = prev + current;
-                break;
-            case '-':
-                computation = prev - current;
-                break;
-            case '*':
-                computation = prev * current;
-                break;
-            case '/':
-                computation = prev / current;
-                break;
-            default:
-                return;
+            case '+': computation = prev + curr; opSym = '+'; break;
+            case '-': computation = prev - curr; opSym = '−'; break;
+            case '*': computation = prev * curr; opSym = '×'; break;
+            case '/': computation = curr === 0 ? '∞' : prev / curr; opSym = '÷'; break;
+            default: return;
         }
-        currentOperand = computation;
+        lastCalculation = `${prev} ${opSym} ${curr} = ${formatNumber(computation)}`;
+        currentOperand = formatNumber(computation);
         operation = undefined;
         previousOperand = '';
+        showFull = true;
         updateDisplay();
     }
 
-    // Fungsi persen
     function percent() {
         if (currentOperand === '') return;
-        currentOperand = parseFloat(currentOperand) / 100;
+        const prev = parseFloat(currentOperand);
+        const res = prev / 100;
+        lastCalculation = `${prev} ÷ 100 = ${formatNumber(res)}`;
+        currentOperand = formatNumber(res);
+        showFull = true;
         updateDisplay();
     }
 
-    // Fungsi akar kuadrat
     function sqrt() {
         if (currentOperand === '') return;
-        currentOperand = Math.sqrt(parseFloat(currentOperand));
+        const prev = parseFloat(currentOperand);
+        const res = Math.sqrt(prev);
+        lastCalculation = `√${prev} = ${formatNumber(res)}`;
+        currentOperand = formatNumber(res);
+        showFull = true;
         updateDisplay();
     }
 
-    // Menghapus tampilan
     function clearDisplay() {
         currentOperand = '';
         previousOperand = '';
         operation = undefined;
+        lastCalculation = '';
+        showFull = false;
         updateDisplay();
     }
 
-    // Memperbarui tampilan
-    function updateDisplay() {
-        display.value = currentOperand;
+    // delete last char / backspace handling
+    function deleteLast() {
+        if (showFull) {
+            clearDisplay();
+            return;
+        }
+        if (currentOperand.length > 0) {
+            currentOperand = currentOperand.slice(0, -1);
+        } else if (operation !== undefined) {
+            operation = undefined;
+        } else if (previousOperand.length > 0) {
+            previousOperand = previousOperand.slice(0, -1);
+        }
+        updateDisplay();
     }
+
+    // Keyboard support
+    document.addEventListener('keydown', (e) => {
+        if (e.key >= '0' && e.key <= '9') { appendNumber(e.key); e.preventDefault(); return; }
+        if (e.key === '.') { appendNumber('.'); e.preventDefault(); return; }
+        if (e.key === '+' || e.key === '-' || e.key === '*' || e.key === '/') { chooseOperation(e.key); e.preventDefault(); return; }
+        if (e.key === 'Enter') { calculate(); e.preventDefault(); return; }
+        if (e.key === 'Backspace') { deleteLast(); e.preventDefault(); return; }
+        if (e.key === 'Escape') { clearDisplay(); e.preventDefault(); return; }
+    });
+
+    // Theme toggle
+    themeToggle.addEventListener('click', () => {
+        document.documentElement.classList.toggle('dark-theme');
+        // small bounce
+        themeToggle.classList.add('pressed');
+        setTimeout(()=> themeToggle.classList.remove('pressed'), 180);
+    });
+
+    // Button ripple + press animation
+    document.querySelectorAll('button').forEach(btn => {
+        btn.classList.add('button-anim');
+        btn.addEventListener('click', function (e) {
+            // ripple
+            const rect = btn.getBoundingClientRect();
+            const ripple = document.createElement('span');
+            ripple.className = 'ripple';
+            ripple.style.left = (e.clientX - rect.left) + 'px';
+            ripple.style.top = (e.clientY - rect.top) + 'px';
+            btn.appendChild(ripple);
+            setTimeout(() => ripple.remove(), 700);
+            // pressed visual
+            btn.classList.add('pressed');
+            setTimeout(() => btn.classList.remove('pressed'), 140);
+        });
+    });
+
+    // initial render
+    updateDisplay();
 </script>
 
 </body>
