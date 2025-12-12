@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Calculator</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #e0f7fa;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .calculator {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            width: 320px;
+        }
+        #display {
+            width: 92%;
+            height: 60px;
+            text-align: right;
+            font-size: 30px;
+            margin-bottom: 15px;
+            padding: 10px;
+            border: 2px solid #b2ebf2;
+            border-radius: 10px;
+            background-color: #e0f7fa;
+        }
+        .buttons {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+        }
+        button {
+            padding: 20px;
+            font-size: 18px;
+            border: none;
+            border-radius: 10px;
+            background-color: #b2ebf2;
+            color: #00796b;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        button:hover {
+            background-color: #80deea;
+        }
+        .equal {
+            background-color: #4CAF50;
+            color: white;
+        }
+        .equal:hover {
+            background-color: #45a049;
+        }
+        .clear {
+            background-color: #f44336;
+            color: white;
+        }
+        .clear:hover {
+            background-color: #e53935;
+        }
+        .special {
+            background-color: #ffeb3b;
+            color: #f57f17;
+        }
+        .special:hover {
+            background-color: #fbc02d;
+        }
+    </style>
+</head>
+<body>
+
+<div class="calculator">
+    <input type="text" id="display" disabled>
+    <div class="buttons">
+        <button onclick="clearDisplay()" class="clear">C</button>
+        <button onclick="percent()" class="special">%</button>
+        <button onclick="sqrt()" class="special">√</button>
+        <button onclick="chooseOperation('/')">/</button>
+        
+        <button onclick="appendNumber('7')">7</button>
+        <button onclick="appendNumber('8')">8</button>
+        <button onclick="appendNumber('9')">9</button>
+        <button onclick="chooseOperation('*')">*</button>
+        
+        <button onclick="appendNumber('4')">4</button>
+        <button onclick="appendNumber('5')">5</button>
+        <button onclick="appendNumber('6')">6</button>
+        <button onclick="chooseOperation('-')">-</button>
+        
+        <button onclick="appendNumber('1')">1</button>
+        <button onclick="appendNumber('2')">2</button>
+        <button onclick="appendNumber('3')">3</button>
+        <button onclick="chooseOperation('+')">+</button>
+        
+        <button onclick="appendNumber('0')" style="grid-column: span 2;">0</button>
+        <button onclick="appendNumber('.')">.</button>
+        <button class="equal" onclick="calculate()">=</button>
+    </div>
+</div>
+
+<script>
+    let display = document.getElementById('display');
+    let currentOperand = '';
+    let previousOperand = '';
+    let operation = undefined;
+
+    // Menambahkan angka ke tampilan
+    function appendNumber(number) {
+        if (number === '.' && currentOperand.includes('.')) return;
+        currentOperand = currentOperand.toString() + number.toString();
+        updateDisplay();
+    }
+
+    // Memilih operasi
+    function chooseOperation(op) {
+        if (currentOperand === '') return;
+        if (previousOperand !== '') {
+            calculate();
+        }
+        operation = op;
+        previousOperand = currentOperand;
+        currentOperand = '';
+    }
+
+    // Kalkulasi operasi
+    function calculate() {
+        let computation;
+        const prev = parseFloat(previousOperand);
+        const current = parseFloat(currentOperand);
+        if (isNaN(prev) || isNaN(current)) return;
+        switch (operation) {
+            case '+':
+                computation = prev + current;
+                break;
+            case '-':
+                computation = prev - current;
+                break;
+            case '*':
+                computation = prev * current;
+                break;
+            case '/':
+                computation = prev / current;
+                break;
+            default:
+                return;
+        }
+        currentOperand = computation;
+        operation = undefined;
+        previousOperand = '';
+        updateDisplay();
+    }
+
+    // Fungsi persen
+    function percent() {
+        if (currentOperand === '') return;
+        currentOperand = parseFloat(currentOperand) / 100;
+        updateDisplay();
+    }
+
+    // Fungsi akar kuadrat
+    function sqrt() {
+        if (currentOperand === '') return;
+        currentOperand = Math.sqrt(parseFloat(currentOperand));
+        updateDisplay();
+    }
+
+    // Menghapus tampilan
+    function clearDisplay() {
+        currentOperand = '';
+        previousOperand = '';
+        operation = undefined;
+        updateDisplay();
+    }
+
+    // Memperbarui tampilan
+    function updateDisplay() {
+        display.value = currentOperand;
+    }
+</script>
+
+</body>
+</html>
